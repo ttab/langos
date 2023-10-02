@@ -18,7 +18,7 @@ import (
 func main() {
 	err := run()
 	if err != nil {
-		println("failed to run:", err.Error())
+		_, _ = fmt.Fprintf(os.Stderr, "failed to run: %v", err.Error())
 		os.Exit(1)
 	}
 }
@@ -26,7 +26,6 @@ func main() {
 var (
 	separator = []byte("%%")
 	crlf      = []byte("\r\n")
-	endHeader = []byte("\r\n")
 )
 
 func run() error {
@@ -52,8 +51,10 @@ func run() error {
 
 	defer pairsInput.Close()
 
-	var printErr error
-	var outBuf bytes.Buffer
+	var (
+		printErr error
+		outBuf   bytes.Buffer
+	)
 
 	printf := func(format string, a ...any) {
 		if printErr != nil {
@@ -128,7 +129,7 @@ package langos
 
 	for {
 		record, err := pairReader.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			return fmt.Errorf("failed to read pairs from file: %w", err)
@@ -147,7 +148,7 @@ package langos
 	printf("}\n")
 
 	if printErr != nil {
-		return printErr
+		return fmt.Errorf("failed to write to code buffer: %w", printErr)
 	}
 
 	source, err := format.Source(outBuf.Bytes())
@@ -186,6 +187,7 @@ func readSection(scanner *bufio.Scanner, buf *bytes.Buffer) (textproto.MIMEHeade
 
 		if bytes.Equal(scanner.Bytes(), separator) {
 			write(crlf)
+
 			break
 		}
 
